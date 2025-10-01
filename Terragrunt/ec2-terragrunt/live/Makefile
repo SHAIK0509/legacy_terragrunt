@@ -9,9 +9,9 @@ TERRAFORM_BIN := $(CURDIR)/terraform
 TERRAGRUNT_BIN := $(CURDIR)/terragrunt
 
 # Modules to manage (comma-separated in Jenkins, space here)
-MODULES := ec2 prod-ec2 stage-ec2
+MODULES := dev prod stage
 ENV ?= dev  # default environment
-TG_BASE_DIR := live/$(ENV)
+TG_BASE_DIR := live/
 
 # Detect OS for Terraform/Terragrunt download
 UNAME_S := $(shell uname -s)
