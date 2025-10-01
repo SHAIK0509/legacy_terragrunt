@@ -22,7 +22,7 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    def makeDir = "terragrunt/ec2-terragrunt/live"
+                    def makeDir = "terragrunt/ec2-terragrunt/live/dev"
                     echo "Running plan in ${makeDir}"
                     sh "make -C ${makeDir} plan ENV=${params.ENVIRONMENT}"
                 }
@@ -52,6 +52,17 @@ pipeline {
                     def envDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
                     echo "Fetching outputs from ${envDir}"
                     sh "make -C ${envDir} output ENV=${params.ENVIRONMENT}"
+                }
+            }
+        }
+
+        stage('Workspace Info') {
+            steps {
+                script {
+                    echo "Current workspace directory:"
+                    sh 'pwd'
+                    echo "Listing files recursively:"
+                    sh 'ls -lR'
                 }
             }
         }
