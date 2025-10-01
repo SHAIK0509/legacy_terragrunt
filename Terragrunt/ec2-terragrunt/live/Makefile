@@ -8,10 +8,10 @@ TERRAGRUNT_VERSION ?= 0.27.1
 TERRAFORM_BIN := $(CURDIR)/terraform
 TERRAGRUNT_BIN := $(CURDIR)/terragrunt
 
-# Modules to manage (comma-separated in Jenkins, space here)
+# Modules to manage
 MODULES := dev prod stage
 ENV ?= dev  # default environment
-TG_BASE_DIR := live/
+TG_BASE_DIR := $(CURDIR)
 
 # Detect OS for Terraform/Terragrunt download
 UNAME_S := $(shell uname -s)
@@ -40,18 +40,23 @@ install:
 	./terragrunt --version
 
 # ========================================================
-# Plan for all modules
+# Plan for all modules (safe, skips missing directories)
 # ========================================================
 .PHONY: plan
 plan: install
 	@for module in $(MODULES); do \
-		echo "==============================================="; \
-		echo "Running terragrunt plan in $(TG_BASE_DIR)/$$module"; \
-		( cd $(TG_BASE_DIR)/$$module && \
-		  rm -rf .terragrunt-cache || true && \
-		  PATH=$(CURDIR):$$PATH terragrunt init -reconfigure && \
-		  PATH=$(CURDIR):$$PATH terragrunt plan ); \
-		echo "==============================================="; \
+		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
+		if [ -d "$$MODULE_PATH" ]; then \
+			echo "==============================================="; \
+			echo "Running terragrunt plan in $$MODULE_PATH"; \
+			( cd "$$MODULE_PATH" && \
+			  rm -rf .terragrunt-cache || true && \
+			  PATH=$(CURDIR):$$PATH terragrunt init -reconfigure && \
+			  PATH=$(CURDIR):$$PATH terragrunt plan ); \
+			echo "==============================================="; \
+		else \
+			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+		fi \
 	done
 
 # ========================================================
@@ -60,12 +65,17 @@ plan: install
 .PHONY: apply
 apply: install
 	@for module in $(MODULES); do \
-		echo "==============================================="; \
-		echo "Running terragrunt apply in $(TG_BASE_DIR)/$$module"; \
-		( cd $(TG_BASE_DIR)/$$module && \
-		  rm -rf .terragrunt-cache || true && \
-		  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
-		echo "==============================================="; \
+		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
+		if [ -d "$$MODULE_PATH" ]; then \
+			echo "==============================================="; \
+			echo "Running terragrunt apply in $$MODULE_PATH"; \
+			( cd "$$MODULE_PATH" && \
+			  rm -rf .terragrunt-cache || true && \
+			  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
+			echo "==============================================="; \
+		else \
+			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+		fi \
 	done
 
 # ========================================================
@@ -74,11 +84,16 @@ apply: install
 .PHONY: output
 output: install
 	@for module in $(MODULES); do \
-		echo "==============================================="; \
-		echo "Fetching outputs from $(TG_BASE_DIR)/$$module"; \
-		( cd $(TG_BASE_DIR)/$$module && \
-		  PATH=$(CURDIR):$$PATH terragrunt output ); \
-		echo "==============================================="; \
+		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
+		if [ -d "$$MODULE_PATH" ]; then \
+			echo "==============================================="; \
+			echo "Fetching outputs from $$MODULE_PATH"; \
+			( cd "$$MODULE_PATH" && \
+			  PATH=$(CURDIR):$$PATH terragrunt output ); \
+			echo "==============================================="; \
+		else \
+			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+		fi \
 	done
 
 # ========================================================
