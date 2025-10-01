@@ -19,12 +19,13 @@ pipeline {
 
     stages {
 
+
         stage('Plan') {
             steps {
                 script {
-                    def makeDir = "terragrunt/ec2-terragrunt/live/dev"
-                    echo "Running plan in ${makeDir}"
-                    sh "make -C ${makeDir} plan ENV=${params.ENVIRONMENT}"
+                    def liveDir = "terragrunt/ec2-terragrunt/live"
+                    echo "Running plan in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
                 }
             }
         }
@@ -36,12 +37,13 @@ pipeline {
             }
         }
 
+
         stage('Deploy') {
             steps {
                 script {
-                    def envDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
-                    echo "Deploying in ${envDir}"
-                    sh "make -C ${envDir} deploy ENV=${params.ENVIRONMENT}"
+                    def liveDir = "terragrunt/ec2-terragrunt/live"
+                    echo "Deploying in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
                 }
             }
         }
@@ -49,12 +51,13 @@ pipeline {
         stage('Output') {
             steps {
                 script {
-                    def envDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
-                    echo "Fetching outputs from ${envDir}"
-                    sh "make -C ${envDir} output ENV=${params.ENVIRONMENT}"
+                    def liveDir = "terragrunt/ec2-terragrunt/live"
+                    echo "Fetching outputs from ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make output ENV=${params.ENVIRONMENT}"
                 }
             }
         }
+
 
         stage('Workspace Info') {
             steps {
