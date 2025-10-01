@@ -22,9 +22,9 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    def envDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
-                    echo "Running plan in ${envDir}"
-                    sh "make -C ${envDir} plan ENV=${params.ENVIRONMENT}"
+                    def makeDir = "terragrunt/ec2-terragrunt/live"
+                    echo "Running plan in ${makeDir}"
+                    sh "make -C ${makeDir} plan ENV=${params.ENVIRONMENT}"
                 }
             }
         }
