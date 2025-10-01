@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+    environment {
+        JENKINS_ENVIRONMENT = "true"
+    }
+
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'stage', 'prod'],
+            description: 'Choose environment to deploy'
+        )
+        booleanParam(
+            name: 'AUTO_APPLY',
+            defaultValue: false,
+            description: 'Auto apply without approval?'
+        )
+    }
+
+    stages {
+
+        stage('Plan') {
+            steps {
+                script {
+                    def envDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    echo "Running plan in ${envDir}"
+                    sh "make -C ${envDir} plan ENV=${params.ENVIRONMENT}"
+                }
+            }
+        }
+
+        stage('Approve Apply') {
+            when { expression { return !params.AUTO_APPLY } }
+            steps {
+                input message: "Apply Terragrunt changes to ${params.ENVIRONMENT}?"
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    def envDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    echo "Deploying in ${envDir}"
+                    sh "make -C ${envDir} deploy ENV=${params.ENVIRONMENT}"
+                }
+            }
+        }
+
+        stage('Output') {
+            steps {
+                script {
+                    def envDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    echo "Fetching outputs from ${envDir}"
+                    sh "make -C ${envDir} output ENV=${params.ENVIRONMENT}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully for environment: ${params.ENVIRONMENT}"
+        }
+        failure {
+            echo "Pipeline failed for environment: ${params.ENVIRONMENT}"
+        }
+    }
+}
