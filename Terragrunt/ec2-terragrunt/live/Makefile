@@ -1,6 +1,6 @@
 # ========================================================
 # Makefile for Terragrunt Infrastructure
-# Repo: Test_Code_TF_TG/Terragrunt/ec2-terragrunt
+# Repo: legacy_terragrunt/terragrunt/ec2-terragrunt
 # ========================================================
 
 TERRAFORM_VERSION ?= 0.13.6
@@ -10,7 +10,18 @@ TERRAGRUNT_BIN := $(CURDIR)/terragrunt
 
 # Modules to manage (comma-separated in Jenkins, space here)
 MODULES := ec2 prod-ec2 stage-ec2
-TG_BASE_DIR := live/dev
+ENV ?= dev  # default environment
+TG_BASE_DIR := live/$(ENV)
+
+# Detect OS for Terraform/Terragrunt download
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    TERRAFORM_OS := darwin_amd64
+    TERRAGRUNT_OS := darwin_amd64
+else
+    TERRAFORM_OS := linux_amd64
+    TERRAGRUNT_OS := linux_amd64
+endif
 
 # ========================================================
 # Install Terraform & Terragrunt
@@ -18,13 +29,13 @@ TG_BASE_DIR := live/dev
 .PHONY: install
 install:
 	@echo "Installing Terraform v$(TERRAFORM_VERSION)..."
-	curl -L -o terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_linux_amd64.zip
+	curl -L -o terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$(TERRAFORM_OS).zip
 	unzip -o terraform.zip -d .
 	chmod +x terraform
 	./terraform --version
 
 	@echo "Installing Terragrunt v$(TERRAGRUNT_VERSION)..."
-	curl -L -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v$(TERRAGRUNT_VERSION)/terragrunt_linux_amd64
+	curl -L -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v$(TERRAGRUNT_VERSION)/terragrunt_$(TERRAGRUNT_OS)
 	chmod +x terragrunt
 	./terragrunt --version
 
@@ -54,6 +65,19 @@ apply: install
 		( cd $(TG_BASE_DIR)/$$module && \
 		  rm -rf .terragrunt-cache || true && \
 		  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
+		echo "==============================================="; \
+	done
+
+# ========================================================
+# Output
+# ========================================================
+.PHONY: output
+output: install
+	@for module in $(MODULES); do \
+		echo "==============================================="; \
+		echo "Fetching outputs from $(TG_BASE_DIR)/$$module"; \
+		( cd $(TG_BASE_DIR)/$$module && \
+		  PATH=$(CURDIR):$$PATH terragrunt output ); \
 		echo "==============================================="; \
 	done
 
