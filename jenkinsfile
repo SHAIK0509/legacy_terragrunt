@@ -15,6 +15,16 @@ pipeline {
             defaultValue: false,
             description: 'Auto apply without approval?'
         )
+            booleanParam(
+                name: 'SKIP_APPLY',
+                defaultValue: false,
+                description: 'Skip apply stage?'
+            )
+            booleanParam(
+                name: 'DESTROY_INFRA',
+                defaultValue: false,
+                description: 'Destroy infrastructure?'
+            )
     }
 
     stages {
@@ -35,7 +45,7 @@ pipeline {
         }
 
         stage('Approve Apply') {
-            when { expression { return !params.AUTO_APPLY } }
+            when { expression { return !params.AUTO_APPLY && !params.SKIP_APPLY && !params.DESTROY_INFRA } }
             steps {
                 input message: "Apply Terragrunt changes to ${params.ENVIRONMENT}?"
             }
@@ -43,6 +53,7 @@ pipeline {
 
 
         stage('Deploy') {
+            when { expression { return !params.SKIP_APPLY && !params.DESTROY_INFRA } }
             steps {
                 script {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
@@ -50,6 +61,23 @@ pipeline {
                     sh 'ls -lR'
                     echo "Changing to ${liveDir} and running plan for ${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
+                }
+            }
+        }
+        stage('Destroy Approval') {
+            when { expression { return params.DESTROY_INFRA } }
+            steps {
+                input message: "Destroy Terragrunt infrastructure for ${params.ENVIRONMENT}?"
+            }
+        }
+
+        stage('Destroy') {
+            when { expression { return params.DESTROY_INFRA } }
+            steps {
+                script {
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
+                    echo "Destroying infrastructure for ${params.ENVIRONMENT} in ${liveDir}"
+                    sh "make -C ${liveDir} destroy ENV=${params.ENVIRONMENT}"
                 }
             }
         }
