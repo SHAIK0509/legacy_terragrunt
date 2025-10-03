@@ -135,20 +135,3 @@ clean:
 	find . -name ".terragrunt-cache" -type d -exec rm -rf {} +
 
 
-ENV ?= dev
-
-plan:
-	@echo "Running terragrunt plan for environment: $(ENV)"
-	terragrunt run-all plan -out=tfplan -input=false
-
-apply:
-	@echo "Running terragrunt apply for environment: $(ENV)"
-	terragrunt run-all apply "tfplan" -input=false
-
-destroy:
-	@echo "Running terragrunt destroy for environment: $(ENV)"
-	terragrunt run-all destroy -auto-approve -input=false
-
-output:
-	@echo "Fetching terragrunt outputs for environment: $(ENV)"
-	terragrunt run-all output
