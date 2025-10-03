@@ -85,7 +85,28 @@ apply: install
 	done
 
 # ========================================================
-# Output
+# Destroy for all modules
+# ========================================================
+.PHONY: destroy
+apply: install
+	@set -x; for module in $(MODULES); do \
+		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
+		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
+		if [ -d "$$MODULE_PATH" ]; then \
+			echo "==============================================="; \
+			echo "Running terragrunt apply in $$MODULE_PATH"; \
+			ls -l "$$MODULE_PATH"; \
+			( cd "$$MODULE_PATH" && \
+			  rm -rf .terragrunt-cache || true && \
+			  which terragrunt; \
+			  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
+			echo "==============================================="; \
+		else \
+			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+		fi \
+	done
+# ========================================================
+# Output for all modules
 # ========================================================
 .PHONY: output
 output: install

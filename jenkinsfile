@@ -15,16 +15,16 @@ pipeline {
             defaultValue: false,
             description: 'Auto apply without approval?'
         )
-            booleanParam(
-                name: 'SKIP_APPLY',
-                defaultValue: false,
-                description: 'Skip apply stage?'
-            )
-            booleanParam(
-                name: 'DESTROY_INFRA',
-                defaultValue: false,
-                description: 'Destroy infrastructure?'
-            )
+        booleanParam(
+            name: 'SKIP_APPLY',
+            defaultValue: false,
+            description: 'Skip apply stage?'
+        )
+        booleanParam(
+            name: 'DESTROY_INFRA',
+            defaultValue: false,
+            description: 'Destroy infrastructure?'
+        )
     }
 
     stages {
