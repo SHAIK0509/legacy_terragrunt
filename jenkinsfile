@@ -25,16 +25,20 @@ pipeline {
             defaultValue: false,
             description: 'Destroy infrastructure?'
         )
+        booleanParam(
+            name: 'AUTO_DESTROY',
+            defaultValue: false,
+            description: 'Auto destroy without approval?'
+        )
     }
 
     stages {
 
         stage('Plan') {
-            agent any
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live"
-                    echo "Planning Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    echo "Planning Terraform/Terragrunt in ${liveDir}"
                     sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
                 }
             }
@@ -42,7 +46,7 @@ pipeline {
 
         stage('Approve Apply') {
             when { expression { return !params.AUTO_APPLY && !params.SKIP_APPLY && !params.DESTROY_INFRA } }
-            agent none   // must run on controller
+            agent none
             steps {
                 timeout(time: 30, unit: 'MINUTES') {
                     input message: "Apply Terragrunt changes to ${params.ENVIRONMENT}?"
@@ -52,19 +56,18 @@ pipeline {
 
         stage('Deploy') {
             when { expression { return !params.SKIP_APPLY && !params.DESTROY_INFRA } }
-            agent any
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live"
-                    echo "Deploying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    echo "Deploying Terraform/Terragrunt in ${liveDir}"
                     sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
                 }
             }
         }
 
         stage('Destroy Approval') {
-            when { expression { return params.DESTROY_INFRA } }
-            agent none   // approval on controller
+            when { expression { return params.DESTROY_INFRA && !params.AUTO_DESTROY } }
+            agent none
             steps {
                 timeout(time: 30, unit: 'MINUTES') {
                     input message: "Destroy Terragrunt infrastructure for ${params.ENVIRONMENT}?"
@@ -74,29 +77,26 @@ pipeline {
 
         stage('Destroy') {
             when { expression { return params.DESTROY_INFRA } }
-            agent any
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live"
-                    echo "Destroying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    echo "Destroying Terraform/Terragrunt in ${liveDir}"
                     sh "cd ${liveDir} && make destroy ENV=${params.ENVIRONMENT}"
                 }
             }
         }
 
         stage('Output') {
-            agent any
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live"
-                    echo "Fetching outputs for ${params.ENVIRONMENT} in ${liveDir}"
+                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    echo "Fetching outputs for ${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make output ENV=${params.ENVIRONMENT}"
                 }
             }
         }
 
         stage('Workspace Info') {
-            agent any
             steps {
                 script {
                     echo "Current workspace directory:"
