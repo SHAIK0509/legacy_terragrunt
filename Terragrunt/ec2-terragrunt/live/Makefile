@@ -1,6 +1,5 @@
 # ========================================================
-# Makefile for Terragrunt Infrastructure
-# Repo: terragrunt/ec2-terragrunt
+# Makefile for Terragrunt Infrastructure (Safe ENV Filtering)
 # ========================================================
 
 TERRAFORM_VERSION ?= 0.13.6
@@ -25,40 +24,52 @@ else
 endif
 
 # ========================================================
+# Helper: Run a command in a module safely
+# ========================================================
+define run_module
+MODULE_PATH="$(TG_BASE_DIR)/$1"; \
+if [ -d "$$MODULE_PATH" ]; then \
+    echo "==============================================="; \
+    echo "[INFO] Running $2 in $$MODULE_PATH"; \
+    echo "[DEBUG] ENV=$(ENV), Module=$1"; \
+    ( cd "$$MODULE_PATH" && rm -rf .terragrunt-cache || true && PATH=$(BIN_DIR):$$PATH terragrunt $2 ); \
+    echo "==============================================="; \
+else \
+    echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+fi
+endef
+
+# ========================================================
 # Install Terraform & Terragrunt
 # ========================================================
 .PHONY: install
 install:
 	@mkdir -p $(BIN_DIR)
-	@echo "Installing Terraform v$(TERRAFORM_VERSION)..."
-	curl -L -o $(BIN_DIR)/terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$(TERRAFORM_OS).zip
-	unzip -o $(BIN_DIR)/terraform.zip -d $(BIN_DIR)
-	chmod +x $(TERRAFORM_BIN)
-	$(TERRAFORM_BIN) --version
+	@if [ ! -f $(TERRAFORM_BIN) ]; then \
+		echo "Installing Terraform v$(TERRAFORM_VERSION)..."; \
+		curl -L -o $(BIN_DIR)/terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$(TERRAFORM_OS).zip; \
+		unzip -o $(BIN_DIR)/terraform.zip -d $(BIN_DIR); \
+		chmod +x $(TERRAFORM_BIN); \
+	fi
+	@$(TERRAFORM_BIN) --version
 
-	@echo "Installing Terragrunt v$(TERRAGRUNT_VERSION)..."
-	curl -L -o $(TERRAGRUNT_BIN) https://github.com/gruntwork-io/terragrunt/releases/download/v$(TERRAGRUNT_VERSION)/terragrunt_$(TERRAGRUNT_OS)
-	chmod +x $(TERRAGRUNT_BIN)
-	$(TERRAGRUNT_BIN) --version
+	@if [ ! -f $(TERRAGRUNT_BIN) ]; then \
+		echo "Installing Terragrunt v$(TERRAGRUNT_VERSION)..."; \
+		curl -L -o $(TERRAGRUNT_BIN) https://github.com/gruntwork-io/terragrunt/releases/download/v$(TERRAGRUNT_VERSION)/terragrunt_$(TERRAGRUNT_OS); \
+		chmod +x $(TERRAGRUNT_BIN); \
+	fi
+	@$(TERRAGRUNT_BIN) --version
 
 # ========================================================
 # Plan
 # ========================================================
 .PHONY: plan
 plan: install
-	@set -x; for module in $(MODULES); do \
-		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
-		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		if [ -d "$$MODULE_PATH" ]; then \
-			echo "==============================================="; \
-			echo "Running terragrunt plan in $$MODULE_PATH"; \
-			( cd "$$MODULE_PATH" && \
-			  rm -rf .terragrunt-cache || true && \
-			  PATH=$(BIN_DIR):$$PATH terragrunt init -reconfigure && \
-			  PATH=$(BIN_DIR):$$PATH terragrunt plan ); \
-			echo "==============================================="; \
+	@for module in $(MODULES); do \
+		if [ "$$module" = "$(ENV)" ]; then \
+			$(call run_module,$$module,"init -reconfigure && plan"); \
 		else \
-			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+			echo "[DEBUG] Skipping module $$module (ENV=$(ENV))"; \
 		fi \
 	done
 
@@ -67,18 +78,11 @@ plan: install
 # ========================================================
 .PHONY: apply
 apply: install
-	@set -x; for module in $(MODULES); do \
-		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
-		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		if [ -d "$$MODULE_PATH" ]; then \
-			echo "==============================================="; \
-			echo "Running terragrunt apply in $$MODULE_PATH"; \
-			( cd "$$MODULE_PATH" && \
-			  rm -rf .terragrunt-cache || true && \
-			  PATH=$(BIN_DIR):$$PATH terragrunt apply -auto-approve ); \
-			echo "==============================================="; \
+	@for module in $(MODULES); do \
+		if [ "$$module" = "$(ENV)" ]; then \
+			$(call run_module,$$module,"apply -auto-approve"); \
 		else \
-			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+			echo "[DEBUG] Skipping module $$module (ENV=$(ENV))"; \
 		fi \
 	done
 
@@ -87,18 +91,11 @@ apply: install
 # ========================================================
 .PHONY: destroy
 destroy: install
-	@set -x; for module in $(MODULES); do \
-		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
-		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		if [ -d "$$MODULE_PATH" ]; then \
-			echo "==============================================="; \
-			echo "Running terragrunt destroy in $$MODULE_PATH"; \
-			( cd "$$MODULE_PATH" && \
-			  rm -rf .terragrunt-cache || true && \
-			  PATH=$(BIN_DIR):$$PATH terragrunt destroy -auto-approve ); \
-			echo "==============================================="; \
+	@for module in $(MODULES); do \
+		if [ "$$module" = "$(ENV)" ]; then \
+			$(call run_module,$$module,"destroy -auto-approve"); \
 		else \
-			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+			echo "[DEBUG] Skipping module $$module (ENV=$(ENV))"; \
 		fi \
 	done
 
@@ -107,17 +104,11 @@ destroy: install
 # ========================================================
 .PHONY: output
 output: install
-	@set -x; for module in $(MODULES); do \
-		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
-		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		if [ -d "$$MODULE_PATH" ]; then \
-			echo "==============================================="; \
-			echo "Fetching outputs from $$MODULE_PATH"; \
-			( cd "$$MODULE_PATH" && \
-			  PATH=$(BIN_DIR):$$PATH terragrunt output ); \
-			echo "==============================================="; \
+	@for module in $(MODULES); do \
+		if [ "$$module" = "$(ENV)" ]; then \
+			$(call run_module,$$module,"output"); \
 		else \
-			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+			echo "[DEBUG] Skipping module $$module (ENV=$(ENV))"; \
 		fi \
 	done
 
