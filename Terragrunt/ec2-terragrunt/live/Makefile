@@ -71,48 +71,46 @@ plan: install
 	fi
 
 # ========================================================
-# Apply for all modules
+# Apply for selected ENV only
 # ========================================================
 .PHONY: apply
 apply: install
-	@set -x; for module in $(MODULES); do \
-		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
-		if [ -d "$$MODULE_PATH" ]; then \
-			echo "==============================================="; \
-			echo "Running terragrunt apply in $$MODULE_PATH"; \
-			ls -l "$$MODULE_PATH"; \
-			( cd "$$MODULE_PATH" && \
-			  rm -rf .terragrunt-cache || true && \
-			  which terragrunt; \
-			  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
-			echo "==============================================="; \
-		else \
-			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
-		fi \
-	done
+	@set -x; \
+	MODULE_PATH="$(TG_BASE_DIR)/$(ENV)"; \
+	echo "[DEBUG] Checking module: $(ENV) at $$MODULE_PATH"; \
+	if [ -d "$$MODULE_PATH" ]; then \
+		echo "==============================================="; \
+		echo "Running terragrunt apply in $$MODULE_PATH"; \
+		ls -l "$$MODULE_PATH"; \
+		( cd "$$MODULE_PATH" && \
+		  rm -rf .terragrunt-cache || true && \
+		  which terragrunt; \
+		  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
+		echo "==============================================="; \
+	else \
+		echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+	fi
 
 # ========================================================
-# Destroy for all modules
+# Destroy for selected ENV only
 # ========================================================
 .PHONY: destroy
-apply: install
-	@set -x; for module in $(MODULES); do \
-		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
-		if [ -d "$$MODULE_PATH" ]; then \
-			echo "==============================================="; \
-			echo "Running terragrunt apply in $$MODULE_PATH"; \
-			ls -l "$$MODULE_PATH"; \
-			( cd "$$MODULE_PATH" && \
-			  rm -rf .terragrunt-cache || true && \
-			  which terragrunt; \
-			  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
-			echo "==============================================="; \
-		else \
-			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
-		fi \
-	done
+destroy: install
+	@set -x; \
+	MODULE_PATH="$(TG_BASE_DIR)/$(ENV)"; \
+	echo "[DEBUG] Checking module: $(ENV) at $$MODULE_PATH"; \
+	if [ -d "$$MODULE_PATH" ]; then \
+		echo "==============================================="; \
+		echo "Running terragrunt destroy in $$MODULE_PATH"; \
+		ls -l "$$MODULE_PATH"; \
+		( cd "$$MODULE_PATH" && \
+		  rm -rf .terragrunt-cache || true && \
+		  which terragrunt; \
+		  PATH=$(CURDIR):$$PATH terragrunt destroy -auto-approve ); \
+		echo "==============================================="; \
+	else \
+		echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
+	fi
 # ========================================================
 # Output for all modules
 # ========================================================
