@@ -23,7 +23,7 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
                     echo "Current workspace directory:"
                     sh 'pwd'
                     echo "Listing files recursively:"
