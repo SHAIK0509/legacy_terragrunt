@@ -37,8 +37,8 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    dir("terragrunt/ec2-terragrunt/live") {
-                        echo "🔹 Planning Terragrunt for environment: ${params.ENVIRONMENT}"
+                    dir("terragrunt/ec2-terragrunt") {
+                        echo "🔹 Planning Terragrunt for ${params.ENVIRONMENT}"
                         sh "make plan ENV=${params.ENVIRONMENT}"
                     }
                 }
@@ -60,7 +60,7 @@ pipeline {
             steps {
                 script {
                     dir("terragrunt/ec2-terragrunt") {
-                        echo "🚀 Applying Terragrunt for environment: ${params.ENVIRONMENT}"
+                        echo "🚀 Applying Terragrunt for ${params.ENVIRONMENT}"
                         sh "make apply ENV=${params.ENVIRONMENT}"
                     }
                 }
@@ -82,7 +82,7 @@ pipeline {
             steps {
                 script {
                     dir("terragrunt/ec2-terragrunt") {
-                        echo "⚠️ Destroying Terragrunt infrastructure for environment: ${params.ENVIRONMENT}"
+                        echo "⚠️ Destroying Terragrunt infrastructure for ${params.ENVIRONMENT}"
                         sh "make destroy ENV=${params.ENVIRONMENT}"
                     }
                 }
