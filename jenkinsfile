@@ -12,7 +12,7 @@ pipeline {
         )
         choice(
             name: 'ACTION',
-            choices: ['apply', 'destroy'],
+            choices: ['plan', 'apply', 'destroy'],
             description: 'Choose action: apply (plan+apply) or destroy (plan+destroy)'
         )
     }
@@ -30,12 +30,15 @@ pipeline {
             }
         }
 
-        stage('Approve') {
-            when { expression { return params.ACTION == 'apply' } }
-            agent none
+
+        stage('Plan') {
+            when { expression { return params.ACTION == 'plan' } }
+            agent any
             steps {
-                timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Apply Terragrunt changes to ${params.ENVIRONMENT}?"
+                script {
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
+                    echo "Applying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
                 }
             }
         }
@@ -48,16 +51,6 @@ pipeline {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
                     echo "Applying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
-                }
-            }
-        }
-
-        stage('Destroy Approval') {
-            when { expression { return params.ACTION == 'destroy' } }
-            agent none
-            steps {
-                timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Destroy Terragrunt infrastructure for ${params.ENVIRONMENT}?"
                 }
             }
         }
