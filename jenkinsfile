@@ -2,91 +2,81 @@ pipeline {
     agent any
 
     environment {
-        JENKINS_ENVIRONMENT = "true"
+        ENV     = "${params.ENV ?: 'dev'}"
+        LIVE_DIR = "legacy_terragrunt/terragrunt/ec2-terragrunt/live"
     }
 
     parameters {
-        choice(
-            name: 'ENVIRONMENT',
-            choices: ['dev', 'stage', 'prod'],
-            description: 'Choose environment to deploy'
-        )
-        booleanParam(
-            name: 'AUTO_APPLY',
-            defaultValue: false,
-            description: 'Auto apply without approval?'
-        )
-        booleanParam(
-            name: 'SKIP_APPLY',
-            defaultValue: false,
-            description: 'Skip apply stage?'
-        )
-        booleanParam(
-            name: 'DESTROY_INFRA',
-            defaultValue: false,
-            description: 'Destroy infrastructure?'
-        )
+        choice(name: 'ENV', choices: ['dev', 'stage', 'prod'], description: 'Select environment to deploy')
     }
 
     stages {
 
+        stage('Workspace Info') {
+            steps {
+                sh '''
+                    echo "===== Current Directory ====="
+                    pwd
+                    echo "===== Top-level repo contents ====="
+                    ls -l
+                    echo "===== Recursive structure ====="
+                    ls -lR | head -50
+                '''
+            }
+        }
+
+        stage('Init') {
+            steps {
+                script {
+                    dir("${LIVE_DIR}/${ENV}") {
+                        sh "terragrunt init"
+                    }
+                }
+            }
+        }
+
         stage('Plan') {
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
-                    echo "Running Terragrunt plan for ${params.ENVIRONMENT} in ${liveDir}"
-                    sh """
-                        cd ${liveDir}
-                        make plan ENV=${params.ENVIRONMENT}
-                    """
+                    dir("${LIVE_DIR}/${ENV}") {
+                        sh "terragrunt plan -out=tfplan"
+                    }
                 }
             }
         }
 
         stage('Approve Apply') {
-            when { expression { return !params.AUTO_APPLY && !params.SKIP_APPLY && !params.DESTROY_INFRA } }
-            agent none
             steps {
-                timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Apply Terragrunt changes to ${params.ENVIRONMENT}?"
+                timeout(time: 5, unit: 'MINUTES') {
+                    input message: "Apply changes to ${ENV}?", ok: "Yes, Apply"
                 }
             }
         }
 
         stage('Deploy') {
-            when { expression { return !params.SKIP_APPLY && !params.DESTROY_INFRA } }
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
-                    echo "Applying Terragrunt for ${params.ENVIRONMENT} in ${liveDir}"
-                    sh """
-                        cd ${liveDir}
-                        make apply ENV=${params.ENVIRONMENT}
-                    """
+                    dir("${LIVE_DIR}/${ENV}") {
+                        sh "terragrunt apply -auto-approve tfplan"
+                    }
                 }
             }
         }
 
         stage('Destroy Approval') {
-            when { expression { return params.DESTROY_INFRA } }
-            agent none
             steps {
-                timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Destroy Terragrunt infrastructure for ${params.ENVIRONMENT}?"
+                timeout(time: 5, unit: 'MINUTES') {
+                    input message: "Destroy environment ${ENV}?", ok: "Yes, Destroy"
                 }
             }
         }
 
         stage('Destroy') {
-            when { expression { return params.DESTROY_INFRA } }
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
-                    echo "Destroying infrastructure for ${params.ENVIRONMENT} in ${liveDir}"
-                    sh """
-                        cd ${liveDir}
-                        make destroy ENV=${params.ENVIRONMENT}
-                    """
+                    dir("${LIVE_DIR}/${ENV}") {
+                        sh "terragrunt destroy -auto-approve"
+                    }
                 }
             }
         }
@@ -94,23 +84,20 @@ pipeline {
         stage('Output') {
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
-                    echo "Fetching outputs for ${params.ENVIRONMENT} in ${liveDir}"
-                    sh """
-                        cd ${liveDir}
-                        make output ENV=${params.ENVIRONMENT}
-                    """
+                    dir("${LIVE_DIR}/${ENV}") {
+                        sh "terragrunt output"
+                    }
                 }
             }
         }
     }
 
     post {
-        success {
-            echo "✅ Pipeline completed successfully for environment: ${params.ENVIRONMENT}"
-        }
         failure {
-            echo "❌ Pipeline failed for environment: ${params.ENVIRONMENT}"
+            echo "❌ Pipeline failed for environment: ${ENV}"
+        }
+        success {
+            echo "✅ Pipeline succeeded for environment: ${ENV}"
         }
     }
 }
