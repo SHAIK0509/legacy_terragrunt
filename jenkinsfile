@@ -19,8 +19,8 @@ pipeline {
 
     stages {
 
-        stage('TfPlan') {
-            agent any
+        stage('Plan') {
+            when { expression { return params.ACTION == 'plan' } }
             steps {
                 script {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
@@ -30,22 +30,8 @@ pipeline {
             }
         }
 
-
-        stage('Plan') {
-            when { expression { return params.ACTION == 'plan' } }
-            agent any
-            steps {
-                script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live"
-                    echo "Applying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
-                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
-                }
-            }
-        }
-
         stage('Apply') {
             when { expression { return params.ACTION == 'apply' } }
-            agent any
             steps {
                 script {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
@@ -57,7 +43,6 @@ pipeline {
 
         stage('Destroy') {
             when { expression { return params.ACTION == 'destroy' } }
-            agent any
             steps {
                 script {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
