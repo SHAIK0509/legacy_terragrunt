@@ -24,6 +24,10 @@ pipeline {
             steps {
                 script {
                     def makeDir = "legacy_terragrunt/terragrunt/ec2-terragrunt/live"
+                    echo "Current workspace directory:"
+                    sh 'pwd'
+                    echo "Listing files recursively:"
+                    sh 'ls -lR'
                     echo "Running plan for ${params.ENVIRONMENT} in ${makeDir}"
                     sh "make -C ${makeDir} plan ENV=${params.ENVIRONMENT}"
                 }
