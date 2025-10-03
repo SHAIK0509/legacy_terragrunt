@@ -49,7 +49,7 @@ pipeline {
                     echo "Deploying for ${params.ENVIRONMENT} in ${liveDir}"
                     sh 'ls -lR'
                     echo "Changing to ${liveDir} and running plan for ${params.ENVIRONMENT}"
-                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
                 }
             }
         }
@@ -57,9 +57,11 @@ pipeline {
         stage('Output') {
             steps {
                 script {
-                    def makeDir = "terragrunt/ec2-terragrunt/live"
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
                     echo "Fetching outputs for ${params.ENVIRONMENT} in ${makeDir}"
-                    sh "make -C ${makeDir} output ENV=${params.ENVIRONMENT}"
+                    sh 'ls -lR'
+                    echo "Changing to ${liveDir} and running plan for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make output ENV=${params.ENVIRONMENT}"
                 }
             }
         }
