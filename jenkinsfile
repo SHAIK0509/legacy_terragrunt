@@ -37,9 +37,9 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
-                    echo "Planning Terraform/Terragrunt in ${liveDir}"
-                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
+                    def makeDir = "Terragrunt/ec2-terragrunt"
+                    echo "Planning Terraform/Terragrunt for ${params.ENVIRONMENT}"
+                    sh "cd ${makeDir} && make plan ENV=${params.ENVIRONMENT}"
                 }
             }
         }
@@ -58,9 +58,9 @@ pipeline {
             when { expression { return !params.SKIP_APPLY && !params.DESTROY_INFRA } }
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
-                    echo "Deploying Terraform/Terragrunt in ${liveDir}"
-                    sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
+                    def makeDir = "Terragrunt/ec2-terragrunt"
+                    echo "Deploying Terraform/Terragrunt for ${params.ENVIRONMENT}"
+                    sh "cd ${makeDir} && make apply ENV=${params.ENVIRONMENT}"
                 }
             }
         }
@@ -79,9 +79,9 @@ pipeline {
             when { expression { return params.DESTROY_INFRA } }
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
-                    echo "Destroying Terraform/Terragrunt in ${liveDir}"
-                    sh "cd ${liveDir} && make destroy ENV=${params.ENVIRONMENT}"
+                    def makeDir = "Terragrunt/ec2-terragrunt"
+                    echo "Destroying Terraform/Terragrunt for ${params.ENVIRONMENT}"
+                    sh "cd ${makeDir} && make destroy ENV=${params.ENVIRONMENT}"
                 }
             }
         }
@@ -89,9 +89,9 @@ pipeline {
         stage('Output') {
             steps {
                 script {
-                    def liveDir = "Terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
+                    def makeDir = "Terragrunt/ec2-terragrunt"
                     echo "Fetching outputs for ${params.ENVIRONMENT}"
-                    sh "cd ${liveDir} && make output ENV=${params.ENVIRONMENT}"
+                    sh "cd ${makeDir} && make output ENV=${params.ENVIRONMENT}"
                 }
             }
         }
