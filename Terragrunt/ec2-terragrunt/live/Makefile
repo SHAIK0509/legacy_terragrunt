@@ -42,6 +42,21 @@ install:
 # ========================================================
 # Plan for all modules (safe, skips missing directories)
 # ========================================================
+define run_module
+MODULE_PATH="$(TG_BASE_DIR)/$1"; \
+if [ -d "$$MODULE_PATH" ]; then \
+    echo "==============================================="; \
+    echo "[INFO] Running $2 in $$MODULE_PATH"; \
+    echo "[DEBUG] ENV=$(ENV), Module=$1"; \
+    ( cd "$$MODULE_PATH" && rm -rf .terragrunt-cache || true && PATH=$(BIN_DIR):$$PATH $(TERRAGRUNT_BIN) $2 ); \
+    echo "==============================================="; \
+else \
+    echo "[ERROR] Directory $$MODULE_PATH does not exist, skipping..."; \
+    exit 1; \
+fi
+endef
+
+
 .PHONY: plan
 plan: install
 	@set -x; \
