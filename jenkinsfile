@@ -23,7 +23,7 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    def makeDir = "legacy_terragrunt/terragrunt/ec2-terragrunt/live"
+                    def makeDir = "terragrunt/ec2-terragrunt/live"
                     echo "Current workspace directory:"
                     sh 'pwd'
                     echo "Listing files recursively:"
@@ -45,7 +45,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    def makeDir = "legacy_terragrunt/terragrunt/ec2-terragrunt/live"
+                    def makeDir = "terragrunt/ec2-terragrunt/live"
                     echo "Deploying for ${params.ENVIRONMENT} in ${makeDir}"
                     sh "make -C ${makeDir} apply ENV=${params.ENVIRONMENT}"
                 }
@@ -55,7 +55,7 @@ pipeline {
         stage('Output') {
             steps {
                 script {
-                    def makeDir = "legacy_terragrunt/terragrunt/ec2-terragrunt/live"
+                    def makeDir = "terragrunt/ec2-terragrunt/live"
                     echo "Fetching outputs for ${params.ENVIRONMENT} in ${makeDir}"
                     sh "make -C ${makeDir} output ENV=${params.ENVIRONMENT}"
                 }
