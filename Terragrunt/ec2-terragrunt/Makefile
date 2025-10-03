@@ -46,8 +46,7 @@ install:
 # ========================================================
 .PHONY: plan
 plan: install
-	@set -x; \
-	for module in $(MODULES); do \
+	@set -x; for module in $(MODULES); do \
 		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
 		if [ -d "$$MODULE_PATH" ]; then \
@@ -68,8 +67,7 @@ plan: install
 # ========================================================
 .PHONY: apply
 apply: install
-	@set -x; \
-	for module in $(MODULES); do \
+	@set -x; for module in $(MODULES); do \
 		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
 		if [ -d "$$MODULE_PATH" ]; then \
@@ -89,8 +87,7 @@ apply: install
 # ========================================================
 .PHONY: destroy
 destroy: install
-	@set -x; \
-	for module in $(MODULES); do \
+	@set -x; for module in $(MODULES); do \
 		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
 		if [ -d "$$MODULE_PATH" ]; then \
@@ -110,8 +107,7 @@ destroy: install
 # ========================================================
 .PHONY: output
 output: install
-	@set -x; \
-	for module in $(MODULES); do \
+	@set -x; for module in $(MODULES); do \
 		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
 		if [ -d "$$MODULE_PATH" ]; then \
