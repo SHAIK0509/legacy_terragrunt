@@ -48,7 +48,7 @@ if [ -d "$$MODULE_PATH" ]; then \
     echo "==============================================="; \
     echo "[INFO] Running $2 in $$MODULE_PATH"; \
     echo "[DEBUG] ENV=$(ENV), Module=$1"; \
-    ( cd "$$MODULE_PATH" && rm -rf .terragrunt-cache || true && PATH=$(BIN_DIR):$$PATH $(TERRAGRUNT_BIN) $2 ); \
+    ( cd "$$MODULE_PATH" && rm -rf .terragrunt-cache || true && PATH=$(CURDIR):$$PATH $(TERRAGRUNT_BIN) $2 ); \
     echo "==============================================="; \
 else \
     echo "[ERROR] Directory $$MODULE_PATH does not exist, skipping..."; \
@@ -64,7 +64,7 @@ plan: install
 	if [ -d "$$MODULE_PATH" ]; then \
 		echo "==============================================="; \
 		echo "[INFO] Running plan in $$MODULE_PATH"; \
-		( cd "$$MODULE_PATH" && rm -rf .terragrunt-cache || true && PATH=$(BIN_DIR):$$PATH terragrunt init -reconfigure && PATH=$(BIN_DIR):$$PATH terragrunt plan ); \
+		( cd "$$MODULE_PATH" && rm -rf .terragrunt-cache || true && PATH=$(CURDIR):$$PATH $(TERRAGRUNT_BIN) init -reconfigure && PATH=$(CURDIR):$$PATH $(TERRAGRUNT_BIN) plan ); \
 		echo "==============================================="; \
 	else \
 		echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
