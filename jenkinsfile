@@ -77,7 +77,9 @@ pipeline {
                 script {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
                     echo "Destroying infrastructure for ${params.ENVIRONMENT} in ${liveDir}"
-                    sh "make -C ${liveDir} destroy ENV=${params.ENVIRONMENT}"
+                    sh 'ls -lR'
+                    echo "Changing to ${liveDir} and running plan for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make destroy ENV=${params.ENVIRONMENT}"
                 }
             }
         }
