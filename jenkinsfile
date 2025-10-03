@@ -15,9 +15,28 @@ pipeline {
             choices: ['plan', 'apply', 'destroy'],
             description: 'Choose action: apply (plan+apply) or destroy (plan+destroy)'
         )
+        string(
+            name: 'COMMIT_HASH',
+            defaultValue: '',
+            description: 'Enter the first 7 digits of the commit hash to checkout and run the pipeline'
+        )
     }
 
     stages {
+
+        stage('Checkout') {
+            steps {
+                script {
+                    if (params.COMMIT_HASH) {
+                        echo "Checking out commit hash: ${params.COMMIT_HASH}"
+                        sh "git fetch --all"
+                        sh "git checkout ${params.COMMIT_HASH}"
+                    } else {
+                        echo "No commit hash provided, skipping checkout."
+                    }
+                }
+            }
+        }
 
         stage('Plan') {
             when { expression { return params.ACTION == 'plan' } }
