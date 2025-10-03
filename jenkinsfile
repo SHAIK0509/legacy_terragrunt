@@ -37,7 +37,7 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    dir("terragrunt/ec2-terragrunt") {
+                    dir("terragrunt/ec2-terragrunt/live") {
                         echo "🔹 Planning Terragrunt for environment: ${params.ENVIRONMENT}"
                         sh "make plan ENV=${params.ENVIRONMENT}"
                     }
