@@ -44,13 +44,16 @@ install:
 # ========================================================
 .PHONY: plan
 plan: install
-	@for module in $(MODULES); do \
+	@set -x; for module in $(MODULES); do \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
+		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
 		if [ -d "$$MODULE_PATH" ]; then \
 			echo "==============================================="; \
 			echo "Running terragrunt plan in $$MODULE_PATH"; \
+			ls -l "$$MODULE_PATH"; \
 			( cd "$$MODULE_PATH" && \
 			  rm -rf .terragrunt-cache || true && \
+			  which terragrunt; \
 			  PATH=$(CURDIR):$$PATH terragrunt init -reconfigure && \
 			  PATH=$(CURDIR):$$PATH terragrunt plan ); \
 			echo "==============================================="; \
@@ -64,13 +67,16 @@ plan: install
 # ========================================================
 .PHONY: apply
 apply: install
-	@for module in $(MODULES); do \
+	@set -x; for module in $(MODULES); do \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
+		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
 		if [ -d "$$MODULE_PATH" ]; then \
 			echo "==============================================="; \
 			echo "Running terragrunt apply in $$MODULE_PATH"; \
+			ls -l "$$MODULE_PATH"; \
 			( cd "$$MODULE_PATH" && \
 			  rm -rf .terragrunt-cache || true && \
+			  which terragrunt; \
 			  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
 			echo "==============================================="; \
 		else \
@@ -83,12 +89,15 @@ apply: install
 # ========================================================
 .PHONY: output
 output: install
-	@for module in $(MODULES); do \
+	@set -x; for module in $(MODULES); do \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
+		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
 		if [ -d "$$MODULE_PATH" ]; then \
 			echo "==============================================="; \
 			echo "Fetching outputs from $$MODULE_PATH"; \
+			ls -l "$$MODULE_PATH"; \
 			( cd "$$MODULE_PATH" && \
+			  which terragrunt; \
 			  PATH=$(CURDIR):$$PATH terragrunt output ); \
 			echo "==============================================="; \
 		else \

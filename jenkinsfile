@@ -23,7 +23,7 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
+                    def liveDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
                     echo "Running plan in ${liveDir} for ${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
                 }
@@ -41,7 +41,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
+                    def liveDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
                     echo "Deploying in ${liveDir} for ${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
                 }
@@ -51,7 +51,7 @@ pipeline {
         stage('Output') {
             steps {
                 script {
-                    def liveDir = "terragrunt/ec2-terragrunt/live"
+                    def liveDir = "terragrunt/ec2-terragrunt/live/${params.ENVIRONMENT}"
                     echo "Fetching outputs from ${liveDir} for ${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make output ENV=${params.ENVIRONMENT}"
                 }

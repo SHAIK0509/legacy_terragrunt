@@ -1,8 +1,3 @@
-
-include {
-  path = find_in_parent_folders()
-}
-
 terraform {
   source = "../../../ec2-terragrunt/terraform-modules/ec2/"
 }
