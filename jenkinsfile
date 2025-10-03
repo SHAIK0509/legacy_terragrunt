@@ -25,99 +25,83 @@ pipeline {
             defaultValue: false,
             description: 'Destroy infrastructure?'
         )
-        booleanParam(
-            name: 'AUTO_DESTROY',
-            defaultValue: false,
-            description: 'Auto destroy without approval?'
-        )
     }
 
     stages {
 
         stage('Plan') {
+            agent any
             steps {
                 script {
-                    dir("terragrunt/ec2-terragrunt") {
-                        echo "🔹 Planning Terragrunt for environment: ${params.ENVIRONMENT}"
-                        sh "make plan ENV=${params.ENVIRONMENT}"
-                    }
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
+                    echo "Planning Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
                 }
             }
         }
 
         stage('Approve Apply') {
             when { expression { return !params.AUTO_APPLY && !params.SKIP_APPLY && !params.DESTROY_INFRA } }
-            agent none
+            agent none   // must run on controller
             steps {
                 timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Do you approve Terragrunt apply for ${params.ENVIRONMENT}?"
+                    input message: "Apply Terragrunt changes to ${params.ENVIRONMENT}?"
                 }
             }
         }
 
         stage('Deploy') {
             when { expression { return !params.SKIP_APPLY && !params.DESTROY_INFRA } }
+            agent any
             steps {
                 script {
-                    dir("terragrunt/ec2-terragrunt") {
-                        echo "🚀 Applying Terragrunt for environment: ${params.ENVIRONMENT}"
-                        sh "make apply ENV=${params.ENVIRONMENT}"
-                    }
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
+                    echo "Deploying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
                 }
             }
         }
 
         stage('Destroy Approval') {
-            when { expression { return params.DESTROY_INFRA && !params.AUTO_DESTROY } }
-            agent none
+            when { expression { return params.DESTROY_INFRA } }
+            agent none   // approval on controller
             steps {
                 timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Do you approve Terragrunt destroy for ${params.ENVIRONMENT}?"
+                    input message: "Destroy Terragrunt infrastructure for ${params.ENVIRONMENT}?"
                 }
             }
         }
 
         stage('Destroy') {
             when { expression { return params.DESTROY_INFRA } }
+            agent any
             steps {
                 script {
-                    dir("terragrunt/ec2-terragrunt") {
-                        echo "⚠️ Destroying Terragrunt infrastructure for environment: ${params.ENVIRONMENT}"
-                        sh "make destroy ENV=${params.ENVIRONMENT}"
-                    }
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
+                    echo "Destroying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make destroy ENV=${params.ENVIRONMENT}"
                 }
             }
         }
 
         stage('Output') {
+            agent any
             steps {
                 script {
-                    dir("terragrunt/ec2-terragrunt") {
-                        echo "📄 Fetching outputs for ${params.ENVIRONMENT}"
-                        sh "make output ENV=${params.ENVIRONMENT}"
-                    }
+                    def liveDir = "Terragrunt/ec2-terragrunt/live"
+                    echo "Fetching outputs for ${params.ENVIRONMENT} in ${liveDir}"
+                    sh "cd ${liveDir} && make output ENV=${params.ENVIRONMENT}"
                 }
             }
         }
 
         stage('Workspace Info') {
+            agent any
             steps {
                 script {
-                    echo "📂 Current workspace:"
+                    echo "Current workspace directory:"
                     sh 'pwd'
                     sh 'ls -lR'
-                }
-            }
-        }
-
-        stage('Clean') {
-            when { expression { return !params.DESTROY_INFRA } }
-            steps {
-                script {
-                    dir("terragrunt/ec2-terragrunt") {
-                        echo "🧹 Cleaning temporary files"
-                        sh 'make clean'
-                    }
                 }
             }
         }
