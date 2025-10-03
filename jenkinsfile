@@ -36,6 +36,7 @@ pipeline {
                 script {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
                     echo "Applying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make apply ENV=${params.ENVIRONMENT}"
                 }
             }
@@ -47,6 +48,7 @@ pipeline {
                 script {
                     def liveDir = "Terragrunt/ec2-terragrunt/live"
                     echo "Destroying Terraform/Terragrunt in ${liveDir} for ${params.ENVIRONMENT}"
+                    sh "cd ${liveDir} && make plan ENV=${params.ENVIRONMENT}"
                     sh "cd ${liveDir} && make destroy ENV=${params.ENVIRONMENT}"
                 }
             }
