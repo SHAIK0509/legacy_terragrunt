@@ -1,19 +1,20 @@
 # ========================================================
 # Makefile for Terragrunt Infrastructure
-# Repo: legacy_terragrunt/terragrunt/ec2-terragrunt
+# Repo: terragrunt/ec2-terragrunt
 # ========================================================
 
 TERRAFORM_VERSION ?= 0.13.6
 TERRAGRUNT_VERSION ?= 0.27.1
-TERRAFORM_BIN := $(CURDIR)/terraform
-TERRAGRUNT_BIN := $(CURDIR)/terragrunt
+BIN_DIR := $(CURDIR)/bin
+TERRAFORM_BIN := $(BIN_DIR)/terraform
+TERRAGRUNT_BIN := $(BIN_DIR)/terragrunt
 
 # Modules to manage
-MODULES := dev prod stage
+MODULES := dev stage prod
 ENV ?= dev  # default environment
-TG_BASE_DIR := $(CURDIR)
+TG_BASE_DIR := $(CURDIR)/live  # points to live folder
 
-# Detect OS for Terraform/Terragrunt download
+# Detect OS
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
     TERRAFORM_OS := darwin_amd64
@@ -28,34 +29,33 @@ endif
 # ========================================================
 .PHONY: install
 install:
+	@mkdir -p $(BIN_DIR)
 	@echo "Installing Terraform v$(TERRAFORM_VERSION)..."
-	curl -L -o terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$(TERRAFORM_OS).zip
-	unzip -o terraform.zip -d .
-	chmod +x terraform
-	./terraform --version
+	curl -L -o $(BIN_DIR)/terraform.zip https://releases.hashicorp.com/terraform/$(TERRAFORM_VERSION)/terraform_$(TERRAFORM_VERSION)_$(TERRAFORM_OS).zip
+	unzip -o $(BIN_DIR)/terraform.zip -d $(BIN_DIR)
+	chmod +x $(TERRAFORM_BIN)
+	$(TERRAFORM_BIN) --version
 
 	@echo "Installing Terragrunt v$(TERRAGRUNT_VERSION)..."
-	curl -L -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v$(TERRAGRUNT_VERSION)/terragrunt_$(TERRAGRUNT_OS)
-	chmod +x terragrunt
-	./terragrunt --version
+	curl -L -o $(TERRAGRUNT_BIN) https://github.com/gruntwork-io/terragrunt/releases/download/v$(TERRAGRUNT_VERSION)/terragrunt_$(TERRAGRUNT_OS)
+	chmod +x $(TERRAGRUNT_BIN)
+	$(TERRAGRUNT_BIN) --version
 
 # ========================================================
-# Plan for all modules (safe, skips missing directories)
+# Plan
 # ========================================================
 .PHONY: plan
 plan: install
 	@set -x; for module in $(MODULES); do \
+		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
 		if [ -d "$$MODULE_PATH" ]; then \
 			echo "==============================================="; \
 			echo "Running terragrunt plan in $$MODULE_PATH"; \
-			ls -l "$$MODULE_PATH"; \
 			( cd "$$MODULE_PATH" && \
 			  rm -rf .terragrunt-cache || true && \
-			  which terragrunt; \
-			  PATH=$(CURDIR):$$PATH terragrunt init -reconfigure && \
-			  PATH=$(CURDIR):$$PATH terragrunt plan ); \
+			  PATH=$(BIN_DIR):$$PATH terragrunt init -reconfigure && \
+			  PATH=$(BIN_DIR):$$PATH terragrunt plan ); \
 			echo "==============================================="; \
 		else \
 			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
@@ -63,21 +63,19 @@ plan: install
 	done
 
 # ========================================================
-# Apply for all modules
+# Apply
 # ========================================================
 .PHONY: apply
 apply: install
 	@set -x; for module in $(MODULES); do \
+		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
 		if [ -d "$$MODULE_PATH" ]; then \
 			echo "==============================================="; \
 			echo "Running terragrunt apply in $$MODULE_PATH"; \
-			ls -l "$$MODULE_PATH"; \
 			( cd "$$MODULE_PATH" && \
 			  rm -rf .terragrunt-cache || true && \
-			  which terragrunt; \
-			  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
+			  PATH=$(BIN_DIR):$$PATH terragrunt apply -auto-approve ); \
 			echo "==============================================="; \
 		else \
 			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
@@ -85,41 +83,38 @@ apply: install
 	done
 
 # ========================================================
-# Destroy for all modules
+# Destroy
 # ========================================================
 .PHONY: destroy
-apply: install
+destroy: install
 	@set -x; for module in $(MODULES); do \
+		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
 		if [ -d "$$MODULE_PATH" ]; then \
 			echo "==============================================="; \
-			echo "Running terragrunt apply in $$MODULE_PATH"; \
-			ls -l "$$MODULE_PATH"; \
+			echo "Running terragrunt destroy in $$MODULE_PATH"; \
 			( cd "$$MODULE_PATH" && \
 			  rm -rf .terragrunt-cache || true && \
-			  which terragrunt; \
-			  PATH=$(CURDIR):$$PATH terragrunt apply -auto-approve ); \
+			  PATH=$(BIN_DIR):$$PATH terragrunt destroy -auto-approve ); \
 			echo "==============================================="; \
 		else \
 			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
 		fi \
 	done
+
 # ========================================================
-# Output for all modules
+# Output
 # ========================================================
 .PHONY: output
 output: install
 	@set -x; for module in $(MODULES); do \
+		if [ -n "$(ENV)" ] && [ "$$module" != "$(ENV)" ]; then continue; fi; \
 		MODULE_PATH="$(TG_BASE_DIR)/$$module"; \
-		echo "[DEBUG] Checking module: $$module at $$MODULE_PATH"; \
 		if [ -d "$$MODULE_PATH" ]; then \
 			echo "==============================================="; \
 			echo "Fetching outputs from $$MODULE_PATH"; \
-			ls -l "$$MODULE_PATH"; \
 			( cd "$$MODULE_PATH" && \
-			  which terragrunt; \
-			  PATH=$(CURDIR):$$PATH terragrunt output ); \
+			  PATH=$(BIN_DIR):$$PATH terragrunt output ); \
 			echo "==============================================="; \
 		else \
 			echo "[WARNING] Directory $$MODULE_PATH does not exist, skipping..."; \
@@ -131,7 +126,5 @@ output: install
 # ========================================================
 .PHONY: clean
 clean:
-	rm -f terraform terraform.zip terragrunt
+	rm -rf $(BIN_DIR)
 	find . -name ".terragrunt-cache" -type d -exec rm -rf {} +
-
-

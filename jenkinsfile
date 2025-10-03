@@ -37,9 +37,10 @@ pipeline {
         stage('Plan') {
             steps {
                 script {
-                    def makeDir = "Terragrunt/ec2-terragrunt"
-                    echo "Planning Terraform/Terragrunt for ${params.ENVIRONMENT}"
-                    sh "cd ${makeDir} && make plan ENV=${params.ENVIRONMENT}"
+                    dir("terragrunt/ec2-terragrunt") {
+                        echo "🔹 Planning Terragrunt for environment: ${params.ENVIRONMENT}"
+                        sh "make plan ENV=${params.ENVIRONMENT}"
+                    }
                 }
             }
         }
@@ -49,7 +50,7 @@ pipeline {
             agent none
             steps {
                 timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Apply Terragrunt changes to ${params.ENVIRONMENT}?"
+                    input message: "Do you approve Terragrunt apply for ${params.ENVIRONMENT}?"
                 }
             }
         }
@@ -58,9 +59,10 @@ pipeline {
             when { expression { return !params.SKIP_APPLY && !params.DESTROY_INFRA } }
             steps {
                 script {
-                    def makeDir = "Terragrunt/ec2-terragrunt"
-                    echo "Deploying Terraform/Terragrunt for ${params.ENVIRONMENT}"
-                    sh "cd ${makeDir} && make apply ENV=${params.ENVIRONMENT}"
+                    dir("terragrunt/ec2-terragrunt") {
+                        echo "🚀 Applying Terragrunt for environment: ${params.ENVIRONMENT}"
+                        sh "make apply ENV=${params.ENVIRONMENT}"
+                    }
                 }
             }
         }
@@ -70,7 +72,7 @@ pipeline {
             agent none
             steps {
                 timeout(time: 30, unit: 'MINUTES') {
-                    input message: "Destroy Terragrunt infrastructure for ${params.ENVIRONMENT}?"
+                    input message: "Do you approve Terragrunt destroy for ${params.ENVIRONMENT}?"
                 }
             }
         }
@@ -79,9 +81,10 @@ pipeline {
             when { expression { return params.DESTROY_INFRA } }
             steps {
                 script {
-                    def makeDir = "Terragrunt/ec2-terragrunt"
-                    echo "Destroying Terraform/Terragrunt for ${params.ENVIRONMENT}"
-                    sh "cd ${makeDir} && make destroy ENV=${params.ENVIRONMENT}"
+                    dir("terragrunt/ec2-terragrunt") {
+                        echo "⚠️ Destroying Terragrunt infrastructure for environment: ${params.ENVIRONMENT}"
+                        sh "make destroy ENV=${params.ENVIRONMENT}"
+                    }
                 }
             }
         }
@@ -89,9 +92,10 @@ pipeline {
         stage('Output') {
             steps {
                 script {
-                    def makeDir = "Terragrunt/ec2-terragrunt"
-                    echo "Fetching outputs for ${params.ENVIRONMENT}"
-                    sh "cd ${makeDir} && make output ENV=${params.ENVIRONMENT}"
+                    dir("terragrunt/ec2-terragrunt") {
+                        echo "📄 Fetching outputs for ${params.ENVIRONMENT}"
+                        sh "make output ENV=${params.ENVIRONMENT}"
+                    }
                 }
             }
         }
@@ -99,9 +103,21 @@ pipeline {
         stage('Workspace Info') {
             steps {
                 script {
-                    echo "Current workspace directory:"
+                    echo "📂 Current workspace:"
                     sh 'pwd'
                     sh 'ls -lR'
+                }
+            }
+        }
+
+        stage('Clean') {
+            when { expression { return !params.DESTROY_INFRA } }
+            steps {
+                script {
+                    dir("terragrunt/ec2-terragrunt") {
+                        echo "🧹 Cleaning temporary files"
+                        sh 'make clean'
+                    }
                 }
             }
         }
