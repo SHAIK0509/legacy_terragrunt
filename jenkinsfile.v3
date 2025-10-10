@@ -194,8 +194,8 @@ pipeline {
         stage('test') {
             steps {
                 sh 'cd deploy && make test'
-                junit 'reports/test/*.xml'
-                archiveArtifacts artifacts: "reports/htmlcov/"
+                // junit 'reports/test/*.xml'
+                // archiveArtifacts artifacts: "reports/htmlcov/"
             }
         }
 
