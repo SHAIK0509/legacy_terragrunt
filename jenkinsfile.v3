@@ -200,7 +200,7 @@ pipeline {
         }
 
         stage('deploy') {
-            agent { label 'terraform' }
+            agent any
             steps {
                 sh "cd deploy && make deploy ENV='${params.ENVIRONMENT}'"
             }
