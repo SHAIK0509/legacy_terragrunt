@@ -60,30 +60,30 @@ endif
 
 build: ## Builds the app's docker image
 	@echo '--> Building $(ECR_URL)$(COMPOSE_PROJECT_NAME):$(APP_BUILD_NUMBER)'
-	cd .. & sudo docker compose -f $(COMPOSE_FILE) build
+	cd .. & docker compose -f $(COMPOSE_FILE) build
 .PHONY: build
 
 shell: | build  ## Launches a shell session on a running the app's container
-	sudo docker compose -f $(COMPOSE_FILE) run --rm app bash
+	docker compose -f $(COMPOSE_FILE) run --rm app bash
 .PHONY:
 
 start: | build  ## Starts the compose stack
 	@echo '---> Starting the $(COMPOSE_PROJECT_NAME) compose stack'
-	sudo docker compose -f $(COMPOSE_FILE) up -d
+	docker compose -f $(COMPOSE_FILE) up -d
 .PHONY: start
 
 start-app: | start  ## Starts the entrypoint process in the running stack
 	@echo '---> Starting the $(COMPOSE_PROJECT_NAME) compose stack'
-	sudo docker compose -f $(COMPOSE_FILE) exec app /wait || true
-	sudo docker compose -f $(COMPOSE_FILE) exec app make gunicorn || true
+	docker compose -f $(COMPOSE_FILE) exec app /wait || true
+	docker compose -f $(COMPOSE_FILE) exec app make gunicorn || true
 	@make stop
 .PHONY: start-app
 
 stop:  ## Stops the compose stack
-	sudo docker compose -f $(COMPOSE_FILE) down --volumes --remove-orphans
+	docker compose -f $(COMPOSE_FILE) down --volumes --remove-orphans
 .PHONY: stop
 
-test: export DOCKER_COMPOSE_CMD := sudo docker compose -f $(COMPOSE_FILE) exec -T app
+test: export DOCKER_COMPOSE_CMD := docker compose -f $(COMPOSE_FILE) exec -T app
 test: | start  ## Runs tests against the image
 	@echo '--> Testing $(ECR_URL)$(COMPOSE_PROJECT_NAME):$(APP_BUILD_NUMBER)'
 	$(DOCKER_COMPOSE_CMD) /wait
@@ -95,7 +95,7 @@ test: | start  ## Runs tests against the image
 
 publish: | build  ## Publishes the app image to ECR
 	@echo '--> Publishing $(ECR_URL)perseus:$(APP_BUILD_NUMBER)'
-	$(if $(DRYRUN),@echo "-->" WOULD RUN )sudo docker compose -f $(COMPOSE_FILE) push app
+	$(if $(DRYRUN),@echo "-->" WOULD RUN ) docker compose -f $(COMPOSE_FILE) push app
 
 deploy:  ## Deploys the app service to ECS Fargate
 	@echo '--> Deploying $(ECR_URL)perseus:$(APP_BUILD_NUMBER) to $(ENVIRONMENT)'
@@ -120,7 +120,7 @@ destroy:  ## Destroys the service (dev only)
 	@terragrunt destroy
 
 clean:  ## Removes compose artifacts
-	sudo docker compose -f $(COMPOSE_FILE) down --volumes --remove-orphans --rmi=local
+	docker compose -f $(COMPOSE_FILE) down --volumes --remove-orphans --rmi=local
 	rm -rf ./.terragrunt-cache
 .PHONY: clean
 
