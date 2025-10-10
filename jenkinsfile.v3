@@ -1,0 +1,171 @@
+#!/usr/bin/env groovy
+@Library('pipelines@0.1.18') _
+
+// def slackChannel = '#deploy-notifications'
+def containerName = 'app'
+def appName = 'auth-depot'
+
+def buildEnv
+def buildInfo
+
+def commitHash
+def targetHash
+def gitComparisonUrl
+
+pipeline {
+  agent { label 'docker' }
+
+  parameters {
+    choice(name: 'ENVIRONMENT', choices: ['dev', 'stage', 'prod'], description: 'The deployment environment')
+  }
+
+  options {
+    ansiColor('xterm')
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '30'))
+    disableConcurrentBuilds()
+  }
+
+  stages {
+    stage('setup') {
+      options { skipDefaultCheckout() }
+      steps {
+        script {
+          buildInfo = getBuildInfo()
+          buildEnv = env.ENVIRONMENT ?: 'dev'
+
+          // In the PR build context, this will abort any branch
+          // builds that are running for the same commit hash.
+          abortPreviousBuildsByCommitHash(buildInfo.GIT_COMMIT)
+
+          currentBuild.description = "${appName}:${buildEnv}:${buildInfo.APP_BUILD_NUMBER}"
+          currentBuild.displayName = "${appName}:${buildEnv}:${buildInfo.APP_BUILD_NUMBER}"
+
+          commitHash = buildInfo.GIT_COMMIT.substring(0, 7)
+          targetHash = getDeployedVersion(appName, buildEnv, containerName)
+        //   gitComparisonUrl = "https://github.com/legacydevteam/${appName}/compare/${targetHash}...${commitHash}"
+        }
+      }
+    }
+
+    stage('build') {
+      environment {
+        ECR_URL = "${getEcrDomain()}/"
+        APP_BUILD_NUMBER = "${buildInfo.APP_BUILD_NUMBER}"
+      }
+
+      steps {
+        withDockerRegistry(url:'', credentialsId: 'jenkins-docker-registry') {
+          withArtifactory {
+            sh 'cd deploy && make build'
+          }
+        }
+      }
+    }
+
+    stage('test') {
+      environment { APP_BUILD_NUMBER = "${buildInfo.APP_BUILD_NUMBER}" }
+
+      steps {
+        withDockerRegistry(url:'', credentialsId: 'jenkins-docker-registry') {
+          withArtifactory {
+            sh 'cd deploy && make test'
+          }
+
+          // cobertura coberturaReportFile: 'reports/coverage.xml'
+          junit 'reports/test/*.xml'
+          archiveArtifacts artifacts: "reports/htmlcov/"
+        }
+      }
+    }
+
+    stage('validate') {
+      when {
+        anyOf {
+          branch 'master'
+          expression { return buildEnv == 'dev' && hasPullRequestLabel('DEPLOY PR TO DEV') }
+        }
+      }
+
+      steps {
+        script {
+          if (targetHash && !isAncestor(targetHash, commitHash)) {
+            abort("Aborting deploy because the current commit (${commitHash}) " + \
+                    "is older than the commit in the target environment (${targetHash}")
+          } else {
+            echo("Commit ${commitHash} is deployable. Continuing.")
+          }
+        }
+      }
+    }
+
+    stage('publish') {
+      when {
+        anyOf {
+          branch 'master'
+          expression { return buildEnv == 'dev' && hasPullRequestLabel('DEPLOY PR TO DEV') }
+        }
+      }
+
+      environment {
+        ECR_URL = "${getEcrDomain()}/"
+        APP_BUILD_NUMBER = "${buildInfo.APP_BUILD_NUMBER}"
+      }
+
+      steps {
+        script {
+          withDockerRegistry(url:'', credentialsId: 'jenkins-docker-registry') {
+            withAssumedRole(environment: buildEnv, ecrLogin: true) {
+              withArtifactory {
+                sh 'cd deploy && make publish'
+              }
+            }
+          }
+        }
+      }
+    }
+
+    stage('deploy') {
+      agent { label 'terraform' }
+
+      when {
+        beforeAgent true
+
+        anyOf {
+          branch 'master'
+          expression { return buildEnv == 'dev' && hasPullRequestLabel('DEPLOY PR TO DEV') }
+        }
+      }
+
+      environment { APP_BUILD_NUMBER = "${buildInfo.APP_BUILD_NUMBER}" }
+
+      steps {
+        script {
+          withAssumedRole(environment: buildEnv) {
+            withGitCreds {
+              sh "cd deploy && make deploy ENV='${buildEnv}'"
+            }
+          }
+
+          notifySlack(
+            color: 'good',
+            channel: slackChannel,
+            postscript: (
+              ". The _${appName}_ application has been deployed to *${buildEnv}* from *${env.BRANCH_NAME}*."
+              + " View changes: <${gitComparisonUrl}|${targetHash}...${commitHash}>."
+            ),
+          )
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+       sh "docker rm -vf \$(docker ps -a |awk '{print \$1}'|grep -v CONT) || echo 'docker clean'"
+       sh "docker rmi --force \$(docker images |awk '{print \$3}'|grep -v IMAGE)|| echo 'images cleaned'"
+    }
+    aborted { script { notifySlack(channel: slackChannel) } }
+    failure { script { notifySlack(channel: slackChannel) } }
+  }
+}

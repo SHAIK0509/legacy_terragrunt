@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  app:
+    image: ${ECR_URL:-}legacy-openai:${APP_BUILD_NUMBER:-local}
+    build:
+      context: .
+      args:
+        APP_BUILD_NUMBER: ${APP_BUILD_NUMBER:-local}
+        # ARTIFACTORYUSER: ${ARTIFACTORY_USER}
+        # ARTIFACTORYPASSWORD: ${ARTIFACTORY_PASSWORD}
+        # ? ARTIFACTORY_USER
+        # ? ARTIFACTORY_PASSWORD
+    volumes:
+      - './reports:/usr/src/app/reports'
+    ports:
+      - '80:80'
+    command: make gunicorn
+    environment:
+      PIPENV_NOSPIN: 'true'
+      PIPENV_DOTENV_LOCATION: '.env.build'
+      WAIT_HOSTS_TIMEOUT: 60
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      # ARTIFACTORYUSER: ${ARTIFACTORY_USER}
+      # ARTIFACTORYPASSWORD: ${ARTIFACTORY_PASSWORD}
+      # ? ARTIFACTORY_USER
+      # ? ARTIFACTORY_PASSWORD

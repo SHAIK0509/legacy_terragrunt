@@ -1,0 +1,134 @@
+#!/usr/bin/env groovy
+@Library('pipelines@0.2.24') _
+
+def containerName = 'app'
+def ENVIRONMENT
+
+def buildTag
+def buildName
+def commitHash
+def targetHash
+def appName = 'legacy-data-pod'  // Update if your Glue job repo has a different name
+def slackChannel = '#deploy-notifications'
+def BUILD_TRIGGER_BY = "${currentBuild.getBuildCauses()[0].shortDescription}"
+def userInput // <-- moved to top-level so it’s available to later stages
+
+pipeline {
+  agent { label 'terraform-datapod' }
+
+  parameters {
+    choice(name: 'ENVIRONMENT', choices: ['dev', 'stage', 'prod', 'shared-services'], description: 'The deployment environment')
+    string(name: 'buildTag', defaultValue: '', description: 'master- first 7 chars of last commit hash.')
+  }
+
+  stages {
+    stage('setup') {
+      options { skipDefaultCheckout() }
+      steps {
+        script {
+          buildEnv = env.ENVIRONMENT
+
+          buildTag = "${params.buildTag}"
+          buildName = buildTag.substring(0, buildTag.lastIndexOf('-'))
+          commitHash = buildTag.split('-').last()
+          targetHash = getDeployedVersion(appName, buildEnv, containerName)
+          currentBuild.description = "${appName}:${buildEnv}:${buildTag}"
+          currentBuild.displayName = "${appName}:${buildEnv}:${buildTag}"
+          gitComparisonUrl = "https://github.com/legacydevteam/${appName}/compare/${targetHash}...${commitHash}"
+        }
+      }
+    }
+
+    stage('validate') {
+      steps {
+        script {
+          if (targetHash && !isAncestor(targetHash, commitHash)) {
+            if (buildEnv == 'prod' || buildEnv == 'shared-services') {
+              abort("Aborting deploy because the current commit (${commitHash}) is older than the commit in the target environment (${targetHash})")
+            } else {
+              echo("WARNING: current commit (${commitHash}) is older than the commit in the target environment (${targetHash})")
+            }
+          } else {
+            echo('Commit is deployable. Continuing.')
+          }
+        }
+      }
+    }
+
+    stage('deploy') {
+      when {
+        anyOf {
+          expression { return buildEnv == 'prod' && buildName == 'master' }
+          expression { return buildEnv != 'prod' }
+        }
+      }
+      environment { APP_BUILD_NUMBER = "${buildTag}" }
+      steps {
+        script {
+          userInput = 'Generate Comparison Again'
+
+          while (userInput == 'Generate Comparison Again') {
+            userInput = input(
+              id: 'userInput', message: "Check comparison of build (${commitHash}) against target environment (${env.ENVIRONMENT}):\n\n${gitComparisonUrl}",
+              ok: "Ok",
+              parameters: [
+                [$class: 'ChoiceParameterDefinition',
+                 description:'', name:'Compare again or deploy?', choices: "Generate Comparison Again\nDeploy to ${env.ENVIRONMENT}"]
+              ]
+            )
+          }
+
+          if (userInput == "Deploy to ${env.ENVIRONMENT}") {
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'jenkins-github-token', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_TOKEN']]) {
+              withAssumedRole(environment: env.ENVIRONMENT) {
+                sh """
+                  touch .gitconfig;
+                  rm -rf .gitconfig;
+                  git config --global user.name \$GIT_USERNAME;
+                  git config --global url."https://\$GIT_TOKEN@github.com/".insteadOf "https://github.com/";
+                  #mkdir -p ${appName}/something;
+                  #rm -rf ${appName};
+                  #git clone -v https://github.com/legacydevteam/${appName}.git;
+                  #cd ${appName} && git checkout ${commitHash};
+                  ##  UNCOMMENT THIS
+                  cd ./deploy && make deploy ENV=${params.ENVIRONMENT};
+                """
+              }
+            }
+
+            def ticketLink = ''
+            if (buildEnv == 'prod') {
+              def issueUrl = createJiraIssue("${appName} ${env.APP_BUILD_NUMBER}", "RM ticket for ${appName}:${env.APP_BUILD_NUMBER} Git Comparison: ${gitComparisonUrl}".stripIndent().trim(), )
+              ticketLink = " (<${issueUrl}|RM Ticket>)"
+            }
+
+            def attachments = [
+              [
+                text: "Build for *${appName}*  _${BUILD_TRIGGER_BY}_  has deployed https://github.com/legacydevteam/${appName}/commit/${commitHash} to *${buildEnv}*. View changes: <${gitComparisonUrl}|${targetHash}...${commitHash}>.",
+                color: 'good'
+              ]
+            ]
+            slackSend(channel: '#deploy-notifications', attachments: attachments)
+          }
+        }
+      }
+    }
+
+    stage('upload-utils-and-config') {
+      when {
+        expression { return userInput == "Deploy to ${env.ENVIRONMENT}" }
+      }
+      steps {
+        withAssumedRole(environment: env.ENVIRONMENT) {
+          sh """
+            echo "Uploading utils.py to S3..."
+            aws s3 cp aws_glue_jobs/utilities/utils.py s3://prod-legacy-data-pod/scripts/utils.py
+
+            echo "Uploading config directory to S3..."
+            aws s3 cp aws_glue_jobs/config s3://prod-legacy-data-pod/scripts/config/ --recursive
+          """
+        }
+      }
+    }
+  }
+}
