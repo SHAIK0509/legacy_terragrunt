@@ -1,5 +1,5 @@
 #!/usr/bin/env groovy
-@Library('pipelines@0.1.18') _
+// @Library('pipelines@0.1.18') _
 
 // def slackChannel = '#deploy-notifications'
 def containerName = 'app'
