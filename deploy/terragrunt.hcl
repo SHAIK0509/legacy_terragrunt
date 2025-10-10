@@ -63,7 +63,7 @@ locals {
 
 
   #############################################################################
-  service_name   = get_env("SERVICE_NAME", "legacy-openai")
+  service_name   = get_env("SERVICE_NAME", "auth_depot")
   image_tag      = get_env("APP_BUILD_NUMBER", "latest")
   environment    = get_env("ENVIRONMENT", "dev")
   aws_account_id = get_env("AWS_ACCOUNT_ID", "")

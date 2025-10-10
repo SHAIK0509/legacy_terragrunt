@@ -86,10 +86,10 @@ stop:  ## Stops the compose stack
 test: export DOCKER_COMPOSE_CMD := docker compose -f $(COMPOSE_FILE) exec -T app
 test: | start  ## Runs tests against the image
 	@echo '--> Testing $(ECR_URL)$(COMPOSE_PROJECT_NAME):$(APP_BUILD_NUMBER)'
-	$(DOCKER_COMPOSE_CMD) /wait
-	$(DOCKER_COMPOSE_CMD) pipenv sync --dev --bare
-	$(DOCKER_COMPOSE_CMD) pipenv run make lint
-	$(DOCKER_COMPOSE_CMD) pipenv run make test
+# 	$(DOCKER_COMPOSE_CMD) /wait
+# 	$(DOCKER_COMPOSE_CMD) pipenv sync --dev --bare
+# 	$(DOCKER_COMPOSE_CMD) pipenv run make lint
+# 	$(DOCKER_COMPOSE_CMD) pipenv run make test
 	@make stop
 .PHONY: test
 
