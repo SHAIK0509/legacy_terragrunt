@@ -60,7 +60,7 @@ endif
 
 build: ## Builds the app's docker image
 	@echo '--> Building $(ECR_URL)$(COMPOSE_PROJECT_NAME):$(APP_BUILD_NUMBER)'
-	docker-compose build
+	cd .. & docker-compose build
 .PHONY: build
 
 shell: | build  ## Launches a shell session on a running the app's container
