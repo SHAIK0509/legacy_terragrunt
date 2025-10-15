@@ -111,11 +111,11 @@ deploy: ## Deploys the app service to ECS Fargate
 		curl -L -o terraform.zip https://releases.hashicorp.com/terraform/$${TERRAFORM_VERSION}/terraform_$${TERRAFORM_VERSION}_$${TERRAFORM_OS}.zip; \
 		unzip -o terraform.zip -d .; \
 		chmod +x terraform; \
-		mv terraform /usr/local/bin/terraform || sudo mv terraform /usr/local/bin/terraform; \
+		mv terraform /usr/local/bin/terraform ||  mv terraform /usr/local/bin/terraform; \
 		rm -f terraform.zip; \
 		curl -L -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v$${TERRAGRUNT_VERSION}/terragrunt_$$(uname -s | tr '[:upper:]' '[:lower:]')_amd64; \
 		chmod +x terragrunt; \
-		mv terragrunt /usr/local/bin/terragrunt || sudo mv terragrunt /usr/local/bin/terragrunt; \
+		mv terragrunt /usr/local/bin/terragrunt || mv terragrunt /usr/local/bin/terragrunt; \
 		echo "✅ Terragrunt installation complete"; \
 	else \
 		echo "✅ Terragrunt already installed"; \
