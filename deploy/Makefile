@@ -97,19 +97,35 @@ publish: | build  ## Publishes the app image to ECR
 	@echo '--> Publishing $(ECR_URL)perseus:$(APP_BUILD_NUMBER)'
 	$(if $(DRYRUN),@echo "-->" WOULD RUN ) docker compose -f $(COMPOSE_FILE) push app
 
-deploy:  ## Deploys the app service to ECS Fargate
+deploy: ## Deploys the app service to ECS Fargate
 	@echo '--> Deploying $(ECR_URL)perseus:$(APP_BUILD_NUMBER) to $(ENVIRONMENT)'
 	@rm -rf .terragrunt-cache
-	@pwd
-	@ls
+	pwd
+	ls
+
 	@if ! command -v terragrunt >/dev/null 2>&1; then \
-		echo "⚠️ Terragrunt not found — skipping infrastructure apply step"; \
+		echo "⚠️ Terragrunt not found — installing Terraform & Terragrunt..."; \
+		TERRAFORM_VERSION=1.6.6; \
+		TERRAGRUNT_VERSION=0.67.4; \
+		TERRAFORM_OS=$$(uname | tr '[:upper:]' '[:lower:]')_amd64; \
+		curl -L -o terraform.zip https://releases.hashicorp.com/terraform/$${TERRAFORM_VERSION}/terraform_$${TERRAFORM_VERSION}_$${TERRAFORM_OS}.zip; \
+		unzip -o terraform.zip -d .; \
+		chmod +x terraform; \
+		mv terraform /usr/local/bin/terraform || sudo mv terraform /usr/local/bin/terraform; \
+		rm -f terraform.zip; \
+		curl -L -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v$${TERRAGRUNT_VERSION}/terragrunt_$$(uname -s | tr '[:upper:]' '[:lower:]')_amd64; \
+		chmod +x terragrunt; \
+		mv terragrunt /usr/local/bin/terragrunt || sudo mv terragrunt /usr/local/bin/terragrunt; \
+		echo "✅ Terragrunt installation complete"; \
 	else \
-		echo "--> Running Terragrunt plan (apply step temporarily disabled)"; \
-		terragrunt plan -out $(COMPOSE_PROJECT_NAME).plan || true; \
-		# terragrunt apply -auto-approve $(COMPOSE_PROJECT_NAME).plan; \
+		echo "✅ Terragrunt already installed"; \
 	fi
+
+	@echo "--> Running Terragrunt plan (apply step temporarily disabled)"
+	@terragrunt plan -out $(COMPOSE_PROJECT_NAME).plan || true
+	# terragrunt apply -auto-approve $(COMPOSE_PROJECT_NAME).plan
 .PHONY: deploy
+
 
 output: ## Prints terraform outputs
 	@if command -v terragrunt >/dev/null 2>&1; then \
