@@ -57,13 +57,10 @@ USERCREDS := $(if $(GIT_CREDS_USR),$(GIT_CREDS_USR):$(GIT_CREDS_PSW)@)
 export TERRAGRUNT_SOURCE := git::https://$(USERCREDS)github.com$(shell sed -En 's| +source = "git::ssh://git@github.com(.+)"|\1|p' terragrunt.hcl)
 endif
 
-################################################################################
-# BUILD & DEPLOY TARGETS
-################################################################################
 
 build: ## Builds the app's docker image
 	@echo '--> Building $(ECR_URL)$(COMPOSE_PROJECT_NAME):$(APP_BUILD_NUMBER)'
-	cd .. && docker compose -f $(COMPOSE_FILE) build
+	cd .. & docker compose -f $(COMPOSE_FILE) build
 .PHONY: build
 
 shell: | build  ## Launches a shell session on a running the app's container
@@ -100,7 +97,7 @@ publish: | build  ## Publishes the app image to ECR
 	@echo '--> Publishing $(ECR_URL)perseus:$(APP_BUILD_NUMBER)'
 	$(if $(DRYRUN),@echo "-->" WOULD RUN ) docker compose -f $(COMPOSE_FILE) push app
 
-deploy: ## Deploys the app service to ECS Fargate
+deploy:  ## Deploys the app service to ECS Fargate
 	@echo '--> Deploying $(ECR_URL)perseus:$(APP_BUILD_NUMBER) to $(ENVIRONMENT)'
 	@rm -rf .terragrunt-cache
 	@pwd
@@ -137,7 +134,7 @@ destroy: ## Destroys the service (dev only)
 	fi
 .PHONY: destroy
 
-clean: ## Removes compose artifacts
+clean:  ## Removes compose artifacts
 	docker compose -f $(COMPOSE_FILE) down --volumes --remove-orphans --rmi=local
 	rm -rf ./.terragrunt-cache
 .PHONY: clean
