@@ -100,7 +100,10 @@ publish: | build  ## Publishes the app image to ECR
 deploy:  ## Deploys the app service to ECS Fargate
 	@echo '--> Deploying $(ECR_URL)perseus:$(APP_BUILD_NUMBER) to $(ENVIRONMENT)'
 	@rm -rf .terragrunt-cache
-	terragrunt plan -out $(COMPOSE_PROJECT_NAME).plan
+	pwd
+	ls
+	
+# 	terragrunt plan -out $(COMPOSE_PROJECT_NAME).plan
 	$(if $(DRYRUN),@echo "-->" WOULD RUN )terragrunt apply -auto-approve $(COMPOSE_PROJECT_NAME).plan
 
 output:  ## Prints the outputs in terraform state
