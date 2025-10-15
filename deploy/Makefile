@@ -104,27 +104,29 @@ deploy: ## Deploys the app service to ECS Fargate
 	ls
 
 	@if ! command -v terragrunt >/dev/null 2>&1; then \
-		echo "⚠️ Terragrunt not found — installing Terraform & Terragrunt..."; \
+		echo "⚠️ Terragrunt not found — installing Terraform & Terragrunt locally..."; \
 		TERRAFORM_VERSION=1.6.6; \
 		TERRAGRUNT_VERSION=0.67.4; \
 		TERRAFORM_OS=$$(uname | tr '[:upper:]' '[:lower:]')_amd64; \
+		mkdir -p $$HOME/bin; \
+		export PATH="$$HOME/bin:$$PATH"; \
 		curl -L -o terraform.zip https://releases.hashicorp.com/terraform/$${TERRAFORM_VERSION}/terraform_$${TERRAFORM_VERSION}_$${TERRAFORM_OS}.zip; \
-		unzip -o terraform.zip -d .; \
-		chmod +x terraform; \
-		mv terraform /usr/local/bin/terraform ||  mv terraform /usr/local/bin/terraform; \
+		unzip -o terraform.zip -d $$HOME/bin; \
+		chmod +x $$HOME/bin/terraform; \
 		rm -f terraform.zip; \
-		curl -L -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v$${TERRAGRUNT_VERSION}/terragrunt_$$(uname -s | tr '[:upper:]' '[:lower:]')_amd64; \
-		chmod +x terragrunt; \
-		mv terragrunt /usr/local/bin/terragrunt || mv terragrunt /usr/local/bin/terragrunt; \
-		echo "✅ Terragrunt installation complete"; \
+		curl -L -o $$HOME/bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v$${TERRAGRUNT_VERSION}/terragrunt_$$(uname -s | tr '[:upper:]' '[:lower:]')_amd64; \
+		chmod +x $$HOME/bin/terragrunt; \
+		echo "✅ Terraform & Terragrunt installed under $$HOME/bin"; \
 	else \
 		echo "✅ Terragrunt already installed"; \
 	fi
 
-	@echo "--> Running Terragrunt plan (apply step temporarily disabled)"
-	@terragrunt plan -out $(COMPOSE_PROJECT_NAME).plan || true
+	@export PATH="$$HOME/bin:$$PATH"; \
+	echo "--> Running Terragrunt plan (apply step temporarily disabled)"; \
+	terragrunt plan -out $(COMPOSE_PROJECT_NAME).plan || true
 	# terragrunt apply -auto-approve $(COMPOSE_PROJECT_NAME).plan
 .PHONY: deploy
+
 
 
 output: ## Prints terraform outputs
